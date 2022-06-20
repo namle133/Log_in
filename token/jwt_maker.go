@@ -1,6 +1,7 @@
 package token
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -36,4 +37,20 @@ func (m *JwtMaker) CreateToken(u *domain.UserInit) (string, *Payload, error) {
 	return tokenString, p, nil
 }
 
-// func (m *JwtMaker) VerifyToken
+func (m *JwtMaker) CheckTokenValid(tknStr string) error {
+	payload := &Payload{}
+	tkn, err := jwt.ParseWithClaims(tknStr, payload, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return err
+		}
+		return err
+	}
+	if !tkn.Valid {
+		return fmt.Errorf("Token invalid")
+	}
+	return nil
+}

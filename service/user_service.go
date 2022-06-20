@@ -43,8 +43,6 @@ func (us *UserService) SignIn(c context.Context, ui *domain.UserInit) (*token.Pa
 	if ui.Password == "" {
 		return nil, ErrPasswordIsRequired
 	}
-	j := &token.JwtMaker{}
-	var m token.Maker = j
 	var u *domain.User
 	e := us.Db.First(&u, "username=? and email=?", ui.Username, ui.Email).Scan(&u).Error
 	if e != nil {
@@ -57,7 +55,7 @@ func (us *UserService) SignIn(c context.Context, ui *domain.UserInit) (*token.Pa
 	} else {
 		fmt.Println("password are equal")
 	}
-
+	var m token.Maker = &token.JwtMaker{}
 	tokenString, Payload, err := m.CreateToken(ui)
 	if err != nil {
 		return nil, err
@@ -86,7 +84,7 @@ func (us *UserService) CreateUser(c context.Context, ui *domain.UserInit) error 
 		return ErrPasswordIsRequired
 	}
 	e := us.Db.First(&u, "username=? or email=?", ui.Username, ui.Email).Scan(&u).Error
-	if e != nil {
+	if e == nil {
 		return ErrUserIsExist
 	}
 	uh := &domain.User{Username: ui.Username, Password: hash(ui.Password), Email: ui.Email}
@@ -107,9 +105,14 @@ func (us *UserService) UserAdmin() error {
 	return nil
 }
 
-func (us *UserService) CheckUserAdmin(c context.Context, token string) error {
+func (us *UserService) CheckUserAdmin(c context.Context, tknStr string) error {
 	var t *domain.Token
-	err := us.Db.First(&t, "token_string = ?", token).Error
+	var m token.Maker = &token.JwtMaker{}
+	er := m.CheckTokenValid(tknStr)
+	if er != nil {
+		return ErrTokenIsInvalid
+	}
+	err := us.Db.First(&t, "token_string = ?", tknStr).Error
 	if err != nil {
 		return err
 	}

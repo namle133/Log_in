@@ -13,6 +13,7 @@ var (
 	ErrPasswordIsRequired = errPasswordIsRequired{}
 	ErrEmailIsRequired    = errEmailIsRequired{}
 	ErrUserIsExist        = errUserIsExist{}
+	ErrTokenIsInvalid     = errTokenIsInvalid{}
 )
 
 type errNotFound struct{}
@@ -79,5 +80,15 @@ func (errUserIsExist) Error() string {
 }
 
 func (errUserIsExist) StatusCode() int {
+	return http.StatusBadRequest
+}
+
+type errTokenIsInvalid struct{}
+
+func (errTokenIsInvalid) Error() string {
+	return "token is invalid"
+}
+
+func (errTokenIsInvalid) StatusCode() int {
 	return http.StatusBadRequest
 }

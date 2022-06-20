@@ -39,7 +39,7 @@ func main() {
 		u := decode.InputUser(c)
 		payload, err := i.SignIn(c, u)
 		if err != nil {
-			c.String(http.StatusBadRequest, fmt.Sprintf(" : %v", err))
+			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
 		encode.SignInResponse(c, payload)
@@ -50,13 +50,13 @@ func main() {
 		token := c.GetHeader("Authorization")[7:]
 		err := i.CheckUserAdmin(c, token)
 		if err != nil {
-			c.String(http.StatusBadRequest, fmt.Sprintf(" : %v", err))
+			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
 		u := decode.InputUser(c)
 		er := i.CreateUser(c, u)
 		if er != nil {
-			c.String(http.StatusBadRequest, fmt.Sprintf(" : %v", err))
+			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
 		encode.CreateUserResponse(c)
