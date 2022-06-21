@@ -26,8 +26,13 @@ func main() {
 	pw := os.Getenv("DB_PASSWORD")
 	name := os.Getenv("DB_NAME")
 	port := os.Getenv("DB_PORT")
+	re_host := os.Getenv("REDIS_HOST")
+	re_port := os.Getenv("REDIS_PORT")
 
+	// New connect
+	client := database.NewConn(re_host, re_port)
 	us := &service.UserService{Db: database.ConnectDatabase(host, user, pw, name, port)}
+
 	var i service.IUser = us
 	err := us.UserAdmin()
 	if err != nil {
@@ -37,18 +42,24 @@ func main() {
 
 	r.POST("/signin", func(c *gin.Context) {
 		u := decode.InputUser(c)
-		payload, err := i.SignIn(c, u)
+		payload, tknStr, err := i.SignIn(c, u)
 		if err != nil {
 			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
+		database.Set(client, payload, tknStr)
 		encode.SignInResponse(c, payload)
 	})
 
 	r.POST("/createuser", func(c *gin.Context) {
 		//Authorization Bearer Token
 		token := c.GetHeader("Authorization")[7:]
-		err := i.CheckUserAdmin(c, token)
+		username, e := database.Get(client, token)
+		if e != nil {
+			c.String(http.StatusBadRequest, fmt.Sprintf("%v", e))
+			return
+		}
+		err := i.CheckUserAdmin(c, token, username)
 		if err != nil {
 			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
@@ -65,9 +76,19 @@ func main() {
 	r.DELETE("/logout", func(c *gin.Context) {
 		//Authorization Bearer Token
 		token := c.GetHeader("Authorization")[7:]
-		err := i.LogOut(c, token)
+		username, e := database.Get(client, token)
+		if e != nil {
+			c.String(http.StatusBadRequest, fmt.Sprintf("%v", e))
+			return
+		}
+		err := i.LogOut(c, token, username)
 		if err != nil {
 			c.String(http.StatusBadRequest, "LogOut Failed")
+			return
+		}
+		er := database.Delete(client, token)
+		if er != nil {
+			c.String(http.StatusBadRequest, fmt.Sprintf("%v", er))
 			return
 		}
 		encode.LogoutResponse(c)

@@ -151,7 +151,7 @@ func TestUserService_SignIn(t *testing.T) {
 		us := &UserService{
 			Db: tt.fields.Db,
 		}
-		_, err := us.SignIn(tt.args.c, tt.args.ui)
+		_, _, err := us.SignIn(tt.args.c, tt.args.ui)
 		if (err != nil) != tt.wantErr {
 			t.Errorf("SignIn() error = %v, wantErr %v", err, tt.wantErr)
 			return
@@ -297,8 +297,9 @@ func TestUserService_CheckUserAdmin(t *testing.T) {
 		Db *gorm.DB
 	}
 	type args struct {
-		c     context.Context
-		token string
+		c        context.Context
+		token    string
+		username string
 	}
 	tests := []struct {
 		fields  fields
@@ -318,7 +319,7 @@ func TestUserService_CheckUserAdmin(t *testing.T) {
 		us := &UserService{
 			Db: tt.fields.Db,
 		}
-		if err := us.CheckUserAdmin(tt.args.c, tt.args.token); (err != nil) != tt.wantErr {
+		if err := us.CheckUserAdmin(tt.args.c, tt.args.token, tt.args.username); (err != nil) != tt.wantErr {
 			t.Errorf("CheckUserAdmin() error = %v, wantErr %v", err, tt.wantErr)
 		}
 	}
@@ -334,8 +335,9 @@ func TestUserService_LogOut(t *testing.T) {
 		Db *gorm.DB
 	}
 	type args struct {
-		c     context.Context
-		token string
+		c        context.Context
+		token    string
+		username string
 	}
 	tests := []struct {
 		fields  fields
@@ -355,7 +357,7 @@ func TestUserService_LogOut(t *testing.T) {
 		us := &UserService{
 			Db: tt.fields.Db,
 		}
-		if err := us.LogOut(tt.args.c, tt.args.token); (err != nil) != tt.wantErr {
+		if err := us.LogOut(tt.args.c, tt.args.token, tt.args.username); (err != nil) != tt.wantErr {
 			t.Errorf("LogOut() error = %v, wantErr %v", err, tt.wantErr)
 		}
 	}
