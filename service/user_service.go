@@ -103,7 +103,7 @@ func (us *UserService) UserAdmin() error {
 
 func (us *UserService) CheckUserAdmin(c context.Context, tknStr string, username string) error {
 	var m token.Maker = &token.JwtMaker{}
-	er := m.CheckTokenValid(tknStr)
+	_, er := m.CheckTokenValid(tknStr)
 	if er != nil {
 		return ErrTokenIsInvalid
 	}

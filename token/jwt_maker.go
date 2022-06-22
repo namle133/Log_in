@@ -8,7 +8,7 @@ import (
 	"github.com/namle133/Log_in2.git/Login_logout/domain"
 )
 
-var jwtKey = []byte("my-secrect-key")
+var JwtKey = []byte("my-secrect-key")
 
 type Payload struct {
 	Username string `json:"username"`
@@ -30,27 +30,27 @@ func (m *JwtMaker) CreateToken(u *domain.UserInit) (string, *Payload, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, p)
 
-	tokenString, err := token.SignedString(jwtKey)
+	tokenString, err := token.SignedString(JwtKey)
 	if err != nil {
 		return "", nil, err
 	}
 	return tokenString, p, nil
 }
 
-func (m *JwtMaker) CheckTokenValid(tknStr string) error {
+func (m *JwtMaker) CheckTokenValid(tknStr string) (*Payload, error) {
 	payload := &Payload{}
 	tkn, err := jwt.ParseWithClaims(tknStr, payload, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return JwtKey, nil
 	})
 
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
-			return err
+			return nil, err
 		}
-		return err
+		return nil, err
 	}
 	if !tkn.Valid {
-		return fmt.Errorf("Token invalid")
+		return nil, fmt.Errorf("Token invalid")
 	}
-	return nil
+	return payload, nil
 }

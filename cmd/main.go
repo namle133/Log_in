@@ -12,6 +12,7 @@ import (
 	"github.com/namle133/Log_in2.git/Login_logout/http/decode"
 	"github.com/namle133/Log_in2.git/Login_logout/http/encode"
 	"github.com/namle133/Log_in2.git/Login_logout/service"
+	"github.com/namle133/Log_in2.git/Login_logout/token"
 )
 
 func main() {
@@ -28,9 +29,10 @@ func main() {
 	port := os.Getenv("DB_PORT")
 	re_host := os.Getenv("REDIS_HOST")
 	re_port := os.Getenv("REDIS_PORT")
+	re_pw := os.Getenv("REDIS_PASSWORDS")
 
 	// New connect
-	client := database.NewConn(re_host, re_port)
+	client := database.NewConn(re_host, re_port, re_pw)
 	us := &service.UserService{Db: database.ConnectDatabase(host, user, pw, name, port)}
 
 	var i service.IUser = us
@@ -47,23 +49,28 @@ func main() {
 			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
+
 		database.Set(client, payload, tknStr)
 		encode.SignInResponse(c, payload)
 	})
 
 	r.POST("/createuser", func(c *gin.Context) {
 		//Authorization Bearer Token
-		token := c.GetHeader("Authorization")[7:]
-		username, e := database.Get(client, token)
+		tknStr := c.GetHeader("Authorization")[7:]
+
+		var m token.Maker = &token.JwtMaker{}
+		payload, e := m.CheckTokenValid(tknStr)
 		if e != nil {
 			c.String(http.StatusBadRequest, fmt.Sprintf("%v", e))
 			return
 		}
-		err := i.CheckUserAdmin(c, token, username)
+
+		err := i.CheckUserAdmin(c, tknStr, payload.Username)
 		if err != nil {
 			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
+
 		u := decode.InputUser(c)
 		er := i.CreateUser(c, u)
 		if er != nil {
@@ -75,18 +82,22 @@ func main() {
 
 	r.DELETE("/logout", func(c *gin.Context) {
 		//Authorization Bearer Token
-		token := c.GetHeader("Authorization")[7:]
-		username, e := database.Get(client, token)
+		tknStr := c.GetHeader("Authorization")[7:]
+
+		var m token.Maker = &token.JwtMaker{}
+		payload, e := m.CheckTokenValid(tknStr)
 		if e != nil {
 			c.String(http.StatusBadRequest, fmt.Sprintf("%v", e))
 			return
 		}
-		err := i.LogOut(c, token, username)
+
+		err := i.LogOut(c, tknStr, payload.Username)
 		if err != nil {
 			c.String(http.StatusBadRequest, "LogOut Failed")
 			return
 		}
-		er := database.Delete(client, token)
+
+		er := database.Delete(client, payload.Username)
 		if er != nil {
 			c.String(http.StatusBadRequest, fmt.Sprintf("%v", er))
 			return
