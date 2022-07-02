@@ -29,16 +29,20 @@ func main() {
 	port := os.Getenv("DB_PORT")
 	re_host := os.Getenv("REDIS_HOST")
 	re_port := os.Getenv("REDIS_PORT")
-	re_pw := os.Getenv("REDIS_PASSWORDS")
 
 	// New connect
-	client := database.NewConn(re_host, re_port, re_pw)
+	client, err := database.NewConn(re_host, re_port)
+	if err != nil {
+		fmt.Println("can't connect redis-server: %v", err)
+		return
+	}
+
 	us := &service.UserService{Db: database.ConnectDatabase(host, user, pw, name, port)}
 
 	var i service.IUser = us
-	err := us.UserAdmin()
+	err = us.UserAdmin()
 	if err != nil {
-		fmt.Errorf("can't create useradmin with err: %v", err)
+		fmt.Println("can't create useradmin with err: %v", err)
 		return
 	}
 
@@ -50,7 +54,11 @@ func main() {
 			return
 		}
 
-		database.Set(client, payload, tknStr)
+		err = client.Set(payload, tknStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
+			return
+		}
 		encode.SignInResponse(c, payload)
 	})
 
@@ -59,21 +67,21 @@ func main() {
 		tknStr := c.GetHeader("Authorization")[7:]
 
 		var m token.Maker = &token.JwtMaker{}
-		payload, e := m.CheckTokenValid(tknStr)
-		if e != nil {
-			c.String(http.StatusBadRequest, fmt.Sprintf("%v", e))
+		payload, err := m.CheckTokenValid(tknStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
 
-		err := i.CheckUserAdmin(c, tknStr, payload.Username)
+		err = i.CheckUserAdmin(c, tknStr, payload.Username)
 		if err != nil {
 			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
 
 		u := decode.InputUser(c)
-		er := i.CreateUser(c, u)
-		if er != nil {
+		err = i.CreateUser(c, u)
+		if err != nil {
 			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
@@ -85,21 +93,21 @@ func main() {
 		tknStr := c.GetHeader("Authorization")[7:]
 
 		var m token.Maker = &token.JwtMaker{}
-		payload, e := m.CheckTokenValid(tknStr)
-		if e != nil {
-			c.String(http.StatusBadRequest, fmt.Sprintf("%v", e))
+		payload, err := m.CheckTokenValid(tknStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
 
-		err := i.LogOut(c, tknStr, payload.Username)
+		err = i.LogOut(c, tknStr, payload.Username)
 		if err != nil {
 			c.String(http.StatusBadRequest, "LogOut Failed")
 			return
 		}
 
-		er := database.Delete(client, payload.Username)
-		if er != nil {
-			c.String(http.StatusBadRequest, fmt.Sprintf("%v", er))
+		err = client.Delete(payload.Username)
+		if err != nil {
+			c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
 			return
 		}
 		encode.LogoutResponse(c)
